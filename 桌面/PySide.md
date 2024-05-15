@@ -66,6 +66,126 @@ if __name__ == "__main__":
 
 
 
+
+
+# 部件样式
+
+## 使用QSS文本
+
+```python
+import sys
+from PySide2.QtCore import Qt
+from PySide2.QtWidgets import QApplication, QLabel
+
+if __name__ == "__main__":
+    app = QApplication()
+    w = QLabel("This is a placeholder text")
+    w.setAlignment(Qt.AlignCenter)
+    w.setStyleSheet(
+        """
+        background-color: #262626;
+        color: #FFFFFF;
+        font-family: Titillium;
+        font-size: 18px;
+        """
+    )
+    w.show()
+    sys.exit(app.exec_())
+
+```
+
+
+
+
+
+## 使用QSS文件
+
+`style.qss`
+
+```python
+QLabel {
+    background-color: #262626;
+    color: #FFFFFF;
+    font-family: Titillium;
+    font-size: 18px;
+}
+```
+
+
+
+```python
+import sys
+
+from PySide2.QtCore import Qt
+from PySide2.QtWidgets import QApplication, QLabel
+
+if __name__ == "__main__":
+    app = QApplication()
+
+    w = QLabel("This is a placeholder text")
+    w.setAlignment(Qt.AlignCenter)
+
+    with open("style.qss", "r") as f:
+        _style = f.read()
+        w.setStyleSheet(_style)
+
+    w.show()
+
+    sys.exit(app.exec_())
+```
+
+
+
+# 主窗口 QMainWindow
+
+QMainWindow 组成部分：
+
+![QMainWindow layout](https://doc.qt.io/qtforpython-5/_images/QMainWindow-layout.png)
+
+
+
+```python
+import sys
+from PySide2.QtGui import QKeySequence
+from PySide2.QtWidgets import QMainWindow, QAction, QApplication
+
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        QMainWindow.__init__(self)
+        self.setWindowTitle("Eartquakes information")
+
+        # Menu
+        self.menu = self.menuBar()
+        self.file_menu = self.menu.addMenu("File")
+
+        # Exit QAction
+        exit_action = QAction("Exit", self)
+        exit_action.setShortcut(QKeySequence.Quit)
+        exit_action.triggered.connect(self.close)
+
+        self.file_menu.addAction(exit_action)
+
+        # Status Bar
+        self.status = self.statusBar()
+        self.status.showMessage("Data loaded and plotted")
+
+        # Window dimensions
+        geometry = QApplication.desktop().availableGeometry(self)
+        self.setFixedSize(int(geometry.width() * 0.8), int(geometry.height() * 0.7))
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    main_window = MainWindow()
+    main_window.show()
+    app.exec_()
+```
+
+
+
+
+
 # 界面实现
 
 ## 纯代码
