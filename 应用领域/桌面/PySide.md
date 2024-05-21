@@ -1029,3 +1029,85 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+# 事件系统
+
+PySide2的事件处理系统是其GUI框架的核心部分，它负责接收和分发来自操作系统或用户的各种事件，并确保应用程序能够对这些事件做出响应。以下是事件处理系统的几个关键概念和组件：
+
+1. 事件（Event）
+
+事件是对应用程序发生的某种交互或状态变化的描述。常见的事件类型包括：
+- **键盘事件** (`QKeyEvent`)：用户按下或释放键盘按键。
+- **鼠标事件** (`QMouseEvent`)：鼠标移动、点击、滚轮等操作。
+- **窗口事件** (`QResizeEvent`, `QCloseEvent`)：窗口大小调整、关闭请求等。
+- **定时器事件** (`QTimerEvent`)：由`QTimer`触发的定时事件。
+- **绘图事件** (`QPaintEvent`)：需要重绘窗口部件时触发。
+- **拖放事件** (`QDragEnterEvent`, `QDropEvent`等)：拖拽操作相关的事件。
+
+
+
+2. 事件过滤器（Event Filters）
+
+事件过滤器允许一个对象监听另一个对象的事件。通过安装事件过滤器，一个对象可以在事件到达目标对象之前拦截并处理该事件。这可以用于全局监听或修改事件处理流程。
+
+
+
+3. 事件分发（Event Dispatching）
+
+当事件发生时，Qt的事件处理系统会根据事件类型和目标对象分发这些事件。事件首先被发送到`QCoreApplication::notify()`方法，然后转发给相应的对象。对象通过重载`event()`方法来处理这些事件。如果对象不处理该事件，则事件可能被进一步传递给其父对象或其他相关对象。
+
+
+
+4. 事件处理方法
+
+每个可接收事件的对象通常会有一些预定义的事件处理方法，如：
+- `keyPressEvent()` 和 `keyReleaseEvent()` 处理键盘事件。
+- `mousePressEvent()`、`mouseMoveEvent()` 和 `mouseReleaseEvent()` 处理鼠标事件。
+- `paintEvent()` 处理重绘请求。
+- `resizeEvent()` 处理窗口尺寸变化。
+
+
+
+5. 自定义事件
+
+除了预定义的事件类型外，开发者还可以创建自定义事件(`QEvent`的子类)，并通过`QApplication::postEvent()`或`QApplication::sendEvent()`手动分发这些事件，用于实现特定的通信机制或复杂逻辑。
+
+
+
+示例代码
+
+下面是一个简单的事件处理示例，展示了如何重写`QWidget`的`mousePressEvent`来响应鼠标点击事件：
+
+```python
+from PySide2.QtWidgets import QApplication, QWidget
+from PySide2.QtCore import Qt
+import sys
+
+
+class MyWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            print("Left mouse button clicked at:", event.pos())
+        elif event.button() == Qt.RightButton:
+            print("Right mouse button clicked at:", event.pos())
+        super().mousePressEvent(event)
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    widget = MyWidget()
+    widget.show()
+    sys.exit(app.exec_())
+
+```
+
+此示例中，`MyWidget`类重写了`mousePressEvent`方法来打印鼠标左键或右键点击的位置。这展示了基本的事件处理流程。
+
+
+
