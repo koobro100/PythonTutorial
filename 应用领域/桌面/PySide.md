@@ -1039,13 +1039,20 @@ PySide2的事件处理系统是其GUI框架的核心部分，它负责接收和�
 
 1. 事件（Event）
 
-事件是对应用程序发生的某种交互或状态变化的描述。常见的事件类型包括：
-- **键盘事件** (`QKeyEvent`)：用户按下或释放键盘按键。
-- **鼠标事件** (`QMouseEvent`)：鼠标移动、点击、滚轮等操作。
-- **窗口事件** (`QResizeEvent`, `QCloseEvent`)：窗口大小调整、关闭请求等。
-- **定时器事件** (`QTimerEvent`)：由`QTimer`触发的定时事件。
-- **绘图事件** (`QPaintEvent`)：需要重绘窗口部件时触发。
-- **拖放事件** (`QDragEnterEvent`, `QDropEvent`等)：拖拽操作相关的事件。
+ - 键盘事件：按键按下和松开。 
+ - 鼠标事件：鼠标指针移动、鼠标按键按下和松开。 
+ - 拖放事件：用鼠标进行拖放。
+ - 滚轮事件：鼠标滚轮滚动。
+ - 绘屏事件：重绘屏幕的某些部分。 
+ - 定时事件：定时器到时。 
+ - 焦点事件：键盘焦点移动。
+ - 进入和离开事件：鼠标指针移入Widget内，或者移出。
+ - 移动事件：Widget的位置改变。
+ - 大小改变事件：Widget的大小改变。
+ - 显示和隐藏事件：Widget显示和隐藏。
+ - 窗口事件：窗口是否为当前窗口。
+
+还有一些常见的事件，比如Socket事件、剪贴板事件、字体改变事件、布局改变事件等。
 
 
 
@@ -1064,6 +1071,7 @@ PySide2的事件处理系统是其GUI框架的核心部分，它负责接收和�
 4. 事件处理方法
 
 每个可接收事件的对象通常会有一些预定义的事件处理方法，如：
+
 - `keyPressEvent()` 和 `keyReleaseEvent()` 处理键盘事件。
 - `mousePressEvent()`、`mouseMoveEvent()` 和 `mouseReleaseEvent()` 处理鼠标事件。
 - `paintEvent()` 处理重绘请求。
@@ -1111,3 +1119,76 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+
+
+# 验证器
+
+自带的QIntValidator 有问题，设计不好。
+
+```python
+line_edit = QLineEdit(self)
+line_edit.setValidator(QIntValidator(1, 55))
+```
+
+比如上面代码，想设置只能输入1~55的整数，但是却能输入0、00000、01、99。所以只能自定义验证器。
+
+```python
+import sys
+
+from PySide2.QtWidgets import QApplication, QMainWindow, QLineEdit
+from PySide2.QtGui import QValidator
+
+
+class PositiveIntegerValidator(QValidator):
+    def __init__(self, minValue=0, maxValue=-1, parent=None):
+        super().__init__(parent)
+        self.minValue = minValue
+        self.maxValue = maxValue
+
+        if not isinstance(self.minValue, int) or not isinstance(self.maxValue, int):
+            raise ValueError("参数类型有误")
+
+        if self.minValue < 0 or self.maxValue < 0 or self.minValue >= self.maxValue:
+            raise ValueError("参数值有误")
+
+    def validate(self, input, pos):
+        input = str(input)
+
+        if input == "":
+            return QValidator.Intermediate
+
+        if input.startswith("0") and len(input) > 1:
+            return QValidator.Invalid
+
+        try:
+            value = int(input)
+        except ValueError:
+            return QValidator.Invalid
+
+        if value < self.minValue or (self.maxValue != -1 and value > self.maxValue):
+            return QValidator.Invalid
+
+        return QValidator.Acceptable
+
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super(MainWindow, self).__init__()
+
+        line_edit = QLineEdit(self)
+        line_edit.setValidator(PositiveIntegerValidator(0, 55))
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    main_window = MainWindow()
+    main_window.show()
+    app.exec_()
+
+```
+
+以上代码就能实现只能输入设置的指定范围内的整数。
