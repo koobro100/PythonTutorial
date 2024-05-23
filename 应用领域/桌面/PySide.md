@@ -1192,3 +1192,9 @@ if __name__ == "__main__":
 ```
 
 以上代码就能实现只能输入设置的指定范围内的整数。
+
+
+
+# 模型/视图编程
+
+官方文档：https://doc.qt.io/qtforpython-5/overviews/model-view-programming.html#model-view-programming
