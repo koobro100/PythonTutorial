@@ -1201,6 +1201,16 @@ if __name__ == "__main__":
 
 
 
+委托示例
+https://code.qt.io/cgit/pyside/pyside-setup.git/tree/examples/widgets/itemviews/stardelegate?h=5.15
+
+
+
+# 向导页面
+
+示例：https://code.qt.io/cgit/pyside/pyside-setup.git/tree/examples/widgets/dialogs/classwizard?h=5.15
+
+
 
 
 # 打包
