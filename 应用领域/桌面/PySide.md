@@ -1198,3 +1198,50 @@ if __name__ == "__main__":
 # 模型/视图编程
 
 官方文档：https://doc.qt.io/qtforpython-5/overviews/model-view-programming.html#model-view-programming
+
+
+
+
+
+# 打包
+
+```python
+import shutil
+import os
+import time
+import PyInstaller.__main__
+
+
+start = time.time()
+
+files = ["DCT.spec"]
+dirs = ["build", "dist"]
+
+for item in files:
+    if os.path.exists(item):
+        os.remove(item)
+
+for item in dirs:
+    if os.path.exists(item):
+        shutil.rmtree(item)
+
+
+command = [
+    "app.py",
+    "--noconfirm",
+    "--onedir",
+    "--windowed",
+    "--clean",
+    "--uac-admin",
+    "--name=DCT",
+    "--icon=res/logo.ico",
+    "--add-data=res/dll/BaseType.dll;.",
+    "--add-data=res/dll/BuffDll.dll;.",
+    "--add-data=res;res",
+]
+
+PyInstaller.__main__.run(command)
+
+end = time.time()
+print(f"耗时: {int(end - start)}秒")
+```
