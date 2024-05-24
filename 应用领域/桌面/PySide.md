@@ -1204,6 +1204,11 @@ if __name__ == "__main__":
 
 
 # 打包
+## PyInstaller
+
+官方文档：https://pyinstaller.org/en/stable/index.html
+
+
 
 ```python
 import shutil
