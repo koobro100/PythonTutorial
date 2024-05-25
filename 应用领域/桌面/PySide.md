@@ -802,6 +802,9 @@ Signal.connect(receiver[, type=Qt.AutoConnection])
 
 ## 创建和使用
 
+
+### 继承QThread
+
 以下是一个使用`QThread`的基本示例，展示了如何在PySide2中创建和使用线程：
 
 ```python
@@ -811,18 +814,15 @@ from PySide2.QtCore import QThread, Signal, Slot
 import time
 
 
-# 自定义线程类
 class WorkerThread(QThread):
-    updateSignal = Signal(str)  # 自定义信号，用于在完成任务后通知主线程
+    updateSignal = Signal(str)
 
     def run(self):
-        # 这里放置你的耗时任务
-        for i in range(10):
-            time.sleep(1)  # 模拟耗时操作
-            self.updateSignal.emit(f"Processing... {i+1}/10")  # 发射信号更新UI
+        for i in range(5):
+            time.sleep(1)
+            self.updateSignal.emit(f"Processing... {i+1}/5")
 
 
-# 主窗口类
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -832,28 +832,26 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.label)
 
         self.thread = WorkerThread()
-        self.thread.updateSignal.connect(self.on_update)  # 连接信号到槽函数
-        self.thread.finished.connect(self.on_finished)  # 线程结束时的信号连接
+        self.thread.updateSignal.connect(self.on_update)
+        self.thread.finished.connect(self.on_finished)
 
     @Slot(str)
     def on_update(self, message):
-        """更新UI的槽函数"""
         self.label.setText(message)
 
     @Slot()
     def on_finished(self):
-        """线程完成时的槽函数"""
         self.label.setText("Task completed.")
 
     def start_task(self):
-        self.thread.start()  # 启动线程
+        self.thread.start()
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     mainWindow = MainWindow()
     mainWindow.show()
-    mainWindow.start_task()  # 开始任务
+    mainWindow.start_task()
     sys.exit(app.exec_())
 ```
 
@@ -861,6 +859,92 @@ if __name__ == "__main__":
 
 记住，由于PySide2/Qt是基于C++的，直接在`QThread.run`中修改UI元素是不安全的，因此通常会通过信号-槽机制来安全地跨线程更新UI。
 
+
+
+
+
+### 使用movetothread
+
+PySide（以及其同源库Qt for Python和Qt本身）推荐避免直接继承`QThread`并重写`run()`方法来实现多线程的原因，主要是出于设计模式和资源管理的考虑。以下是一些主要原因：
+
+1. **对象生命周期管理复杂**：当直接在子类化的`QThread`中运行代码时，线程的生命周期与该对象紧密绑定。这可能导致资源释放问题，比如在线程还在运行时对象就被意外销毁了。
+
+2. **耦合度高**：将业务逻辑直接嵌入到线程类中，会使得业务逻辑与线程管理逻辑高度耦合，不利于代码的维护和重用。
+
+3. **信号与槽的限制**：虽然Qt提供了强大的信号与槽机制用于线程间通信，但在自定义`QThread`子类中，直接操作UI组件或访问共享数据时，如果不正确使用信号与槽或者锁机制，很容易引发线程安全问题。
+
+4. **官方推荐使用 worker-object 模式**：Qt官方更推荐使用“工作者对象”模式，即创建一个不继承自`QThread`的普通对象（工作者对象），然后将这个对象移到一个单独的线程中执行。这样可以更好地分离线程管理和实际的工作逻辑，提高代码的清晰度和可维护性。
+
+具体做法是：
+- 创建一个普通类（工作者类）来封装你的任务逻辑。
+- 使用`QThread`实例来管理这个工作者对象的线程上下文。
+- 通过信号与槽机制来实现工作者对象与主线程或其他线程之间的通信和数据同步。
+- 利用`moveToThread()`方法将工作者对象移动到目标线程中执行。
+
+这种做法的优势在于它鼓励更好的面向对象设计原则的应用，比如单一职责原则，同时使得多线程的管理更加集中和清晰，有助于避免潜在的内存泄漏和线程安全问题。
+
+
+```python
+import sys
+from PySide2.QtWidgets import QApplication, QMainWindow, QLabel
+from PySide2.QtCore import QThread, Signal, Slot, QObject
+import time
+
+
+class Worker(QObject):
+    updateSignal = Signal(str)
+    finishedSignal = Signal()
+
+    def process(self):
+        for i in range(5):
+            time.sleep(1)
+            self.updateSignal.emit(f"Processing... {i+1}/5")
+        self.finishedSignal.emit()
+
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        self.label = QLabel("Starting task...", self)
+        self.label.move(50, 50)
+        self.setCentralWidget(self.label)
+
+        self.worker = Worker()
+        self.workerThread = QThread()
+
+        self.worker.moveToThread(self.workerThread)
+        self.worker.updateSignal.connect(self.on_update)
+        self.worker.finishedSignal.connect(self.on_task_finished)
+        self.workerThread.started.connect(self.worker.process)
+
+    @Slot(str)
+    def on_update(self, message):
+        self.label.setText(message)
+
+    @Slot()
+    def on_task_finished(self):
+        self.label.setText("Task completed.")
+        # 可选：如果需要的话，这里可以手动退出线程，但通常worker的生命周期结束时线程会自动结束
+        # self.workerThread.quit()
+
+    def start_task(self):
+        self.workerThread.start()
+
+    def closeEvent(self, event):
+        if self.workerThread.isRunning():
+            self.workerThread.quit()
+            self.workerThread.wait()
+        super().closeEvent(event)
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    mainWindow = MainWindow()
+    mainWindow.show()
+    mainWindow.start_task()
+    sys.exit(app.exec_())
+```
 
 
 ## 暂停、继续、终止
