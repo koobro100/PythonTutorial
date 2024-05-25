@@ -809,20 +809,24 @@ Signal.connect(receiver[, type=Qt.AutoConnection])
 
 ```python
 import sys
-from PySide2.QtWidgets import QApplication, QMainWindow, QLabel
-from PySide2.QtCore import QThread, Signal, Slot
 import time
 
+from PySide2.QtWidgets import QApplication, QMainWindow, QLabel
+from PySide2.QtCore import QThread, Signal, Slot
+from PySide2.QtGui import QCloseEvent
 
+
+# 任务线程
 class WorkerThread(QThread):
     updateSignal = Signal(str)
 
     def run(self):
         for i in range(5):
-            time.sleep(1)
+            self.sleep(1)
             self.updateSignal.emit(f"Processing... {i+1}/5")
 
 
+# 主窗口
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -835,16 +839,31 @@ class MainWindow(QMainWindow):
         self.thread.updateSignal.connect(self.on_update)
         self.thread.finished.connect(self.on_finished)
 
-    @Slot(str)
-    def on_update(self, message):
-        self.label.setText(message)
+    # 开始
+    def start_task(self):
+        self.thread.start()
 
+    # 更新进度
+    @Slot(str)
+    def on_update(self, msg: str):
+        self.label.setText(msg)
+
+    # 结束
     @Slot()
     def on_finished(self):
         self.label.setText("Task completed.")
+        self.close_thread()
 
-    def start_task(self):
-        self.thread.start()
+    # 关闭窗口
+    def closeEvent(self, event: QCloseEvent):
+        self.close_thread()
+        super().closeEvent(event)
+
+    # 关闭线程
+    def close_thread(self):
+        if self.thread.isRunning():
+            self.thread.quit()
+            self.thread.wait()
 
 
 if __name__ == "__main__":
@@ -853,6 +872,7 @@ if __name__ == "__main__":
     mainWindow.show()
     mainWindow.start_task()
     sys.exit(app.exec_())
+
 ```
 
 在这个示例中，我们定义了一个`WorkerThread`子类，继承自`QThread`，并在其中重写了`run`方法来执行耗时任务。我们还定义了一个自定义信号`updateSignal`，用于在任务执行过程中更新UI。主线程中的`MainWindow`类连接了这个信号到`on_update`槽函数，从而能够在任务执行的不同阶段更新界面上的标签文本。
@@ -886,11 +906,14 @@ PySide（以及其同源库Qt for Python和Qt本身）推荐避免直接继承`Q
 
 ```python
 import sys
-from PySide2.QtWidgets import QApplication, QMainWindow, QLabel
-from PySide2.QtCore import QThread, Signal, Slot, QObject
 import time
 
+from PySide2.QtWidgets import QApplication, QMainWindow, QLabel
+from PySide2.QtCore import QThread, Signal, Slot, QObject
+from PySide2.QtGui import QCloseEvent
 
+
+# 任务类
 class Worker(QObject):
     updateSignal = Signal(str)
     finishedSignal = Signal()
@@ -902,6 +925,7 @@ class Worker(QObject):
         self.finishedSignal.emit()
 
 
+# 主窗口
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -918,24 +942,31 @@ class MainWindow(QMainWindow):
         self.worker.finishedSignal.connect(self.on_task_finished)
         self.workerThread.started.connect(self.worker.process)
 
-    @Slot(str)
-    def on_update(self, message):
-        self.label.setText(message)
-
-    @Slot()
-    def on_task_finished(self):
-        self.label.setText("Task completed.")
-        # 可选：如果需要的话，这里可以手动退出线程，但通常worker的生命周期结束时线程会自动结束
-        # self.workerThread.quit()
-
+    # 开始
     def start_task(self):
         self.workerThread.start()
 
-    def closeEvent(self, event):
+    # 更新进度
+    @Slot(str)
+    def on_update(self, msg: str):
+        self.label.setText(msg)
+
+    # 结束
+    @Slot()
+    def on_task_finished(self):
+        self.label.setText("Task completed.")
+        self.close_thread()
+
+    # 关闭窗口
+    def closeEvent(self, event: QCloseEvent):
+        self.close_thread()
+        super().closeEvent(event)
+
+    # 关闭线程
+    def close_thread(self):
         if self.workerThread.isRunning():
             self.workerThread.quit()
             self.workerThread.wait()
-        super().closeEvent(event)
 
 
 if __name__ == "__main__":
@@ -944,6 +975,7 @@ if __name__ == "__main__":
     mainWindow.show()
     mainWindow.start_task()
     sys.exit(app.exec_())
+
 ```
 
 
