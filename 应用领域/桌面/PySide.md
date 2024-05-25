@@ -68,6 +68,39 @@ if __name__ == "__main__":
 
 
 
+
+
+## 命令行参数
+
+```python
+import sys
+
+from PySide2.QtWidgets import QApplication, QLabel
+
+app = QApplication(sys.argv)
+
+# 从命令行参数获取字符串（如果提供了参数）
+message = "Default Message"
+if len(sys.argv) > 1:
+    print(sys.argv)
+    message = sys.argv[1]
+
+
+"""
+python main.py "aaa"
+运行后界面标签为aaa
+"""
+
+label = QLabel(message)
+label.show()
+
+sys.exit(app.exec_())
+```
+
+
+
+
+
 # 部件样式
 
 ## 使用QSS文本
@@ -1474,3 +1507,49 @@ PyInstaller.__main__.run(command)
 end = time.time()
 print(f"耗时: {int(end - start)}秒")
 ```
+
+
+
+
+
+
+
+# 案例
+
+## 颜色闪烁
+
+```python
+import sys
+
+from PySide2.QtCore import Qt, QTimer
+from PySide2.QtWidgets import QApplication, QLabel
+
+
+def change_text_color(label):
+    def change_to_green():
+        label.setStyleSheet("color: green;")
+        QTimer.singleShot(1000, change_to_red)  # 1秒后变为红色
+
+    def change_to_red():
+        label.setStyleSheet("color: red;")
+        QTimer.singleShot(1000, change_to_green)  # 1秒后变回绿色
+
+    change_to_green()  # 启动颜色变换周期
+
+
+app = QApplication(sys.argv)
+label = QLabel("Hello World!")
+label.resize(300, 200)
+label.setAlignment(Qt.AlignCenter)
+label.show()
+
+# 开始颜色变化循环
+change_text_color(label)
+
+app.exec_()
+```
+
+
+
+
+
