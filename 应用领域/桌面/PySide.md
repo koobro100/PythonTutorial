@@ -979,6 +979,104 @@ if __name__ == "__main__":
 ```
 
 
+### 跨线程终止
+
+```python
+
+import sys
+import threading
+import time
+
+from PySide2.QtWidgets import QApplication, QMainWindow, QLabel
+from PySide2.QtCore import QObject, QThread, Signal, Slot
+from PySide2.QtGui import QCloseEvent
+
+
+# 任务线程
+class WorkerThread(QThread):
+    updateSignal = Signal(str)
+
+    def __init__(self):
+        super().__init__()
+        self.stop_flag = False
+
+    def run(self):
+        for i in range(5):
+            if not self.stop_flag:
+                self.sleep(1)
+                self.updateSignal.emit(f"Processing... {i+1}/5")
+
+    def stop(self):
+        self.stop_flag = True
+
+
+class MonitorThread(QThread):
+    drop_signal = Signal()
+
+    def run(self) -> None:
+        time.sleep(3)
+        self.drop_signal.emit()
+
+
+# 主窗口
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        self.label = QLabel("Starting task...", self)
+        self.label.move(50, 50)
+        self.setCentralWidget(self.label)
+
+        self.thread = WorkerThread()
+        self.thread.updateSignal.connect(self.on_update)
+        self.thread.finished.connect(self.on_finished)
+
+    # 开始
+    def start_task(self):
+        self.thread.start()
+        self.monitor_thread = MonitorThread()
+        self.monitor_thread.drop_signal.connect(self.handle_drop)
+        self.monitor_thread.start()
+
+    # 处理掉盘
+    def handle_drop(self):
+        self.thread.stop()
+        self.close_thread()
+
+    # 更新进度
+    @Slot(str)
+    def on_update(self, msg: str):
+        self.label.setText(msg)
+
+    # 结束
+    @Slot()
+    def on_finished(self):
+        self.label.setText("Task completed.")
+        self.close_thread()
+
+    # 关闭窗口
+    def closeEvent(self, event: QCloseEvent):
+        self.close_thread()
+        super().closeEvent(event)
+
+    # 关闭线程
+    def close_thread(self):
+        if self.thread.isRunning():
+            self.thread.quit()
+            self.thread.wait()
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    mainWindow = MainWindow()
+    mainWindow.show()
+    mainWindow.start_task()
+    sys.exit(app.exec_())
+
+```
+
+
+
 ## 暂停、继续、终止
 
 程序实现了一个能够显示0-99数字循环进度的功能，并提供了进度查看、暂停、继续及终止操作。
